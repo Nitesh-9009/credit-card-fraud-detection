@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Credit Card Fraud Detection · KNN</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #141a2e;
+      --card-2: #1b2440;
+      --text: #e7ecf5;
+      --muted: #93a0bd;
+      --accent: #6ea8fe;
+      --fraud: #ff5c7a;
+      --valid: #33d69f;
+      --border: #263252;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 20% -10%, #1a2b52 0%, transparent 60%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+    .wrap { width: 100%; max-width: 760px; }
+    header { text-align: center; margin-bottom: 28px; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; color: var(--muted); }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card-2);
+      color: var(--text);
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: transform .05s ease, border-color .2s;
+    }
+    button:hover { border-color: var(--accent); }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      background: linear-gradient(135deg, #4b7bec, #6ea8fe);
+      border: none;
+      font-weight: 600;
+      flex: 1;
+      min-width: 160px;
+    }
+    label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      background: #0e1424;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .result { display: none; }
+    .result.show { display: block; }
+    .verdict {
+      display: flex; align-items: center; gap: 14px;
+      padding: 18px; border-radius: 12px; margin-bottom: 16px;
+    }
+    .verdict .dot { width: 14px; height: 14px; border-radius: 50%; }
+    .verdict .big { font-size: 22px; font-weight: 700; }
+    .verdict.fraud { background: rgba(255,92,122,.12); border: 1px solid var(--fraud); }
+    .verdict.fraud .dot { background: var(--fraud); }
+    .verdict.valid { background: rgba(51,214,159,.12); border: 1px solid var(--valid); }
+    .verdict.valid .dot { background: var(--valid); }
+    .meter { height: 10px; background: #0e1424; border-radius: 6px; overflow: hidden; margin: 6px 0 4px; }
+    .meter > span { display: block; height: 100%; background: linear-gradient(90deg, var(--valid), #ffd166, var(--fraud)); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+    .stat { background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+    .stat b { display: block; font-size: 18px; }
+    .stat span { font-size: 12px; color: var(--muted); }
+    footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 8px; }
+    footer a { color: var(--accent); text-decoration: none; }
+    code { background: #0e1424; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>💳 Credit Card Fraud Detection</h1>
+      <p>K-Nearest-Neighbors classifier · trained on the ULB Kaggle dataset</p>
+    </header>
+
+    <div class="card">
+      <div class="row">
+        <button onclick="loadSample('fraud')">⚠️ Load fraud example</button>
+        <button onclick="loadSample('valid')">✅ Load valid example</button>
+        <button onclick="randomize()">🎲 Randomize</button>
+      </div>
+
+      <label for="features">Transaction features — V1…V28 followed by Amount (29 comma-separated values)</label>
+      <textarea id="features" spellcheck="false"></textarea>
+      <div class="hint">
+        V1–V28 are anonymized PCA components; the last value is the transaction
+        <b>Amount</b>. Use the sample buttons above for real records from the dataset.
+      </div>
+
+      <div class="row" style="margin-top:16px;margin-bottom:0">
+        <button class="primary" id="analyzeBtn" onclick="analyze()">Analyze transaction</button>
+      </div>
+    </div>
+
+    <div class="card result" id="result">
+      <div class="verdict" id="verdict">
+        <span class="dot"></span>
+        <div>
+          <div class="big" id="verdictText">—</div>
+          <div class="hint" id="verdictSub">—</div>
+        </div>
+      </div>
+      <label>Fraud probability</label>
+      <div class="meter"><span id="meterFill" style="width:0%"></span></div>
+      <div class="hint" id="probText">—</div>
+      <div class="stats">
+        <div class="stat"><b id="statProb">—</b><span>Fraud probability</span></div>
+        <div class="stat"><b id="statVotes">—</b><span>Fraud neighbors</span></div>
+        <div class="stat"><b id="statK">—</b><span>k (neighbors)</span></div>
+      </div>
+    </div>
+
+    <footer>
+      Built with a KNN model · <a href="https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud" target="_blank" rel="noopener">ULB dataset</a>
+      · Educational demo — not for real financial decisions.
+    </footer>
+  </div>
+
+  <script>
+    // Real records pulled from the dataset (V1..V28, Amount).
+    const SAMPLES = {
+      fraud: [-2.312227, 1.951992, -1.609851, 3.997906, -0.522188, -1.426545, -2.537387, 1.391657, -2.770089, -2.772272, 3.202033, -2.899907, -0.595222, -4.289254, 0.389724, -1.140747, -2.830056, -0.016822, 0.416956, 0.126911, 0.517232, -0.035049, -0.465211, 0.320198, 0.044519, 0.177840, 0.261145, -0.143276, 0.000000],
+      valid: [-1.359807, -0.072781, 2.536347, 1.378155, -0.338321, 0.462388, 0.239599, 0.098698, 0.363787, 0.090794, -0.551600, -0.617801, -0.991390, -0.311169, 1.468177, -0.470401, 0.207971, 0.025791, 0.403993, 0.251412, -0.018307, 0.277838, -0.110474, 0.066928, 0.128539, -0.189115, 0.133558, -0.021053, 149.620000]
+    };
+
+    function setFeatures(arr) {
+      document.getElementById('features').value = arr.map(v => Number(v).toFixed(6)).join(', ');
+    }
+    function loadSample(kind) { setFeatures(SAMPLES[kind]); }
+    function randomize() {
+      const arr = Array.from({ length: 28 }, () => (Math.random() * 6 - 3));
+      arr.push(Math.round(Math.random() * 500 * 100) / 100);
+      setFeatures(arr);
+    }
+
+    async function analyze() {
+      const btn = document.getElementById('analyzeBtn');
+      const raw = document.getElementById('features').value.trim();
+      const features = raw.split(/[,\s]+/).map(Number).filter(v => !Number.isNaN(v));
+      if (features.length !== 29) {
+        alert(`Expected 29 values (V1..V28 + Amount), got ${features.length}.`);
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Analyzing…';
+      try {
+        const res = await fetch('/api/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ features })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        render(data);
+      } catch (err) {
+        alert('Error: ' + err.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Analyze transaction';
+      }
+    }
+
+    function render(d) {
+      const isFraud = d.prediction === 1;
+      const pct = Math.round(d.fraud_probability * 100);
+      const result = document.getElementById('result');
+      const verdict = document.getElementById('verdict');
+      result.classList.add('show');
+      verdict.className = 'verdict ' + (isFraud ? 'fraud' : 'valid');
+      document.getElementById('verdictText').textContent = isFraud ? 'Fraudulent transaction' : 'Legitimate transaction';
+      document.getElementById('verdictSub').textContent = isFraud
+        ? 'The model flagged this transaction as fraud.'
+        : 'The model considers this transaction safe.';
+      document.getElementById('meterFill').style.width = pct + '%';
+      document.getElementById('probText').textContent = `${pct}% of the ${d.k} nearest transactions were fraudulent.`;
+      document.getElementById('statProb').textContent = pct + '%';
+      document.getElementById('statVotes').textContent = `${d.fraud_votes}/${d.k}`;
+      document.getElementById('statK').textContent = d.k;
+      result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    loadSample('valid');
+  </script>
+</body>
+</html>
