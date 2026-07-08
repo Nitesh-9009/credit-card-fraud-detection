@@ -14,7 +14,26 @@ lightweight **Python serverless function** on **Vercel** with a static frontend.
   pure NumPy, so it stays well under Vercel's size limit and cold-starts fast.
 - Clean, responsive UI with real sample transactions from the dataset.
 
-## 🗂️ Project structure
+## � Results
+
+Evaluated on a held-out, balanced test set (246 transactions, 50/50 split):
+
+| Metric | Score |
+| --- | --- |
+| Accuracy | **91.9%** |
+| Precision | 95.6% |
+| Recall | 87.8% |
+| F1-score | 91.5% |
+| ROC-AUC | 0.944 |
+
+Confusion matrix:
+
+|  | Predicted valid | Predicted fraud |
+| --- | --- | --- |
+| **Actual valid** | 118 (TN) | 5 (FP) |
+| **Actual fraud** | 15 (FN) | 108 (TP) |
+
+## �🗂️ Project structure
 
 ```
 fraud/
