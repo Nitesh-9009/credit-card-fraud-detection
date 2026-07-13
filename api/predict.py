@@ -1,15 +1,4 @@
-"""
-Vercel Python serverless function: /api/predict
 
-Re-implements K-Nearest-Neighbors inference with pure NumPy so the function
-stays small and cold-starts fast (no scikit-learn at runtime). The maths is
-numerically identical to sklearn's KNeighborsClassifier with uniform weights
-and the Euclidean metric.
-
-POST body (JSON), either form is accepted:
-  { "features": [V1, V2, ..., V28, Amount] }          # 29 ordered values
-  { "V1": .., "V2": .., ..., "V28": .., "Amount": .. } # named values
-"""
 
 from __future__ import annotations
 
