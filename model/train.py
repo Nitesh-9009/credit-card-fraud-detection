@@ -1,18 +1,4 @@
-"""
-Credit Card Fraud Detection - model training.
 
-Dataset: ULB "Credit Card Fraud Detection" (284,807 European card
-transactions from Sept. 2013, 492 frauds). Features V1..V28 are the result
-of a PCA transformation; only `Time`, `Amount` and `Class` are original.
-
-Because the data is extremely imbalanced (0.172% fraud), raw accuracy is a
-misleading metric (a "predict everything as valid" model scores 99.8%).
-We therefore build a *balanced* problem via random under-sampling so that
-accuracy is meaningful, then train a K-Nearest-Neighbors classifier and
-report a full battery of metrics (accuracy, precision, recall, F1, ROC-AUC).
-
-Run:  python model/train.py
-"""
 
 from __future__ import annotations
 
